@@ -23,10 +23,7 @@ enum PlayerAction {
 struct PlayerDecision {
     PlayerAction action;
     int raise;
-
 };
-
-
 
 enum PlayerState {
     PS_PLAYING,
@@ -59,8 +56,7 @@ struct Table {
     Player players[PLAYERS_MAX];
     int playerCount;
     int dealerIdx;
-    // last acted player
-    int actorIdx;
+    int actorIdx;           // last acted player
     PlayerDecision actorDecision;
     int lastRaiserIdx;
     int lastRaise;
@@ -192,9 +188,7 @@ void player_make_decision() {
         cout << "Raise to? ";
         cin >> input;
         g_table.actorDecision.action = PA_RAISE;
-        // my min allowed bet during re-raise is (g_table.bet + g_table.lastRaise)
-        int diff = max(input, g_table.bet + g_table.lastRaise) - player.bet;
-        g_table.actorDecision.raise = min(diff, player.stack);
+        g_table.actorDecision.raise = input;
 
     } else if (g_table.bet == player.bet && input == 3) {
         g_table.actorDecision.action = PA_CHECK;
@@ -219,7 +213,7 @@ void ai_make_decision() {
     if (g_table.bet == player.bet) {
         g_table.actorDecision.action = PA_CHECK;
 
-    } else if (p < 0.2) {
+    } else if (p < 0.2 && g_table.bet < player.bet + player.stack) {
         // reraise 2-3 times or going all-in
         g_table.actorDecision.action = PA_RAISE;
         int coef = random() < 0.5 ? 2 : 3;
@@ -326,13 +320,16 @@ void update() {
             }
         } while (g_table.players[g_table.actorIdx].state != PS_PLAYING);
 
-        if (g_table.actorIdx == 0) {
-            player_make_decision();
-        } else {
-            ai_make_decision();
+        if (g_table.state == TS_PREFLOP) {
+            if (g_table.actorIdx == 0) {
+                player_make_decision();
+            } else {
+                ai_make_decision();
+            }
+            table_apply_decision();
+            break;
         }
-        table_apply_decision();
-        break;
+        /* else fallthru */
 
     case TS_FLOP:
 
